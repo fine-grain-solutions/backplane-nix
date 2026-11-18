@@ -28,8 +28,18 @@
   fetchurl,
   kicad,
   runtimeShell,
+  glycin-loaders,
+  bubblewrap,
   withLibraries ? true,
 }: let
+  # The bundled GTK loads images through glycin, but the bundle ships no
+  # glycin loaders (it expects the system's). Without them the GUI programs
+  # abort at start ("No image loaders are configured"). glycin finds its
+  # loaders through XDG_DATA_DIRS and runs them sandboxed with bwrap.
+  glycinEnv = ''
+    export XDG_DATA_DIRS="${glycin-loaders}/share''${XDG_DATA_DIRS:+:$XDG_DATA_DIRS}"
+    export PATH="${bubblewrap}/bin''${PATH:+:$PATH}"
+  '';
   release = "backplane-kicad-v10.99.0-bp.4";
   libs = kicad.libraries;
   excludeArgs = lib.optionals (!withLibraries) [
@@ -76,7 +86,8 @@ in
         grep -q 'ld-linux-x86-64.so.2' "$f" || { echo "unexpected launcher $f"; exit 1; }
         substituteInPlace "$f" \
           --replace-fail '#!/usr/bin/env sh' '#!${runtimeShell}' \
-          --replace-fail 'root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)' "root=$out" ${lib.concatStringsSep " " libraryArgs}
+          --replace-fail 'root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)' "root=$out" ${lib.concatStringsSep " " libraryArgs} \
+          --replace-fail 'export KICAD_KIFACE_HOME=' ${lib.escapeShellArg glycinEnv}'export KICAD_KIFACE_HOME='
       done
       test -x $out/bin/kicad-cli.real
       runHook postInstall
