@@ -37,6 +37,7 @@
     checks = forAllSystems (system: pkgs:
       nixpkgs.lib.optionalAttrs (system == "x86_64-linux") {
         hub = import ./tests/hub.nix {inherit self pkgs;};
+        hub-kicad = import ./tests/hub-kicad.nix {inherit self pkgs;};
       }
       // {
         inherit (self.packages.${system}) backplane;
