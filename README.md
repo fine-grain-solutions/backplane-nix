@@ -76,7 +76,7 @@ plus one Tailscale flag, with `BACKPLANE_NO_UPDATE=1`.
 | `package` | this flake's `backplane` | The Backplane package. |
 | `user` | required | User the hub (and the agent tools it starts) runs as. |
 | `group` | the user's group | Group of the service. |
-| `dataDir` | `~user/.backplane/hub` | Backplane's data folder. The module creates it empty (0700, owned by the user) and never writes inside it. |
+| `dataDir` | `~user/.backplane/hub` | Backplane's data folder. The module creates it empty (0700, owned by the user) and never writes inside it (see Unsupported below). |
 | `port` | `3787` | Port, always on `127.0.0.1`. |
 | `tailscale` | `"off"` | `off` → `--no-tailscale`, `tailnet` → `--tailscale`, `tailnet-https` → `--tailscale-https`, `tailnet-only` → `--tailnet-only`. Anything but `off` needs `services.tailscale.enable`. |
 | `openFirewall` | `false` | Open `port` on the Tailscale interface only. |
@@ -90,6 +90,21 @@ plus one Tailscale flag, with `BACKPLANE_NO_UPDATE=1`.
 | `kicad.fork.package` | this flake's `backplane-kicad` | The fork. |
 | `kistack.enable` | `true` | Put the KiStack skills next to the hub. |
 | `kistack.package` | this flake's `kistack` | The skills. |
+
+#### Unsupported: `services.backplane.unsupported.settings`
+
+Off by default (`{}`), and then nothing is written. Example:
+`services.backplane.unsupported.settings = { "restart.continue" = "off"; };`
+
+With a non-empty set, before each hub start the module appends a
+`SettingSet` line to `<dataDir>/events.jsonl` for every key whose last
+`SettingSet` is missing or has another value. Existing lines are never
+changed. This writes Backplane's internal event log, which is not a
+documented interface. It was observed to work with Backplane 0.15.0 (the
+hub replays `SettingSet` lines from `events.jsonl` at start). It may break
+or corrupt state on other versions. Prefer changing settings in
+Backplane's Settings. If a key's last entry cannot be read, it is skipped
+with a warning in the journal; the hub start does not fail.
 
 ### `programs.backplane`
 
@@ -130,6 +145,7 @@ nix flake check          # evaluates both systems, runs the VM test on x86_64-li
 nix build .#backplane
 ./result/bin/backplane-hub --help
 nix build .#checks.x86_64-linux.hub -L   # only the VM test (needs KVM)
+nix build .#checks.x86_64-linux.hub-settings -L   # the unsupported.settings test
 nix fmt
 ```
 
@@ -151,8 +167,9 @@ To try the module in your own configuration, add the flake as an input
   puts the packages you list on the hub's `PATH` and handles no logins.
 - Only documented interfaces: the hub's command-line flags and the
   environment variables in Backplane's docs. The module never writes the
-  hub's data folder (event log, settings, tokens). Settings are changed in
-  Backplane itself.
+  hub's data folder (event log, settings, tokens), with one explicit,
+  off-by-default exception: `services.backplane.unsupported.settings`.
+  Settings are normally changed in Backplane itself.
 
 ## License
 

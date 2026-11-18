@@ -8,7 +8,8 @@
 # with the upstream doc (at tag v0.15.0) that describes it.
 #
 # The module never writes inside the hub's data folder. It may create the
-# folder itself (mode 0700, owned by the user) and nothing else.
+# folder itself (mode 0700, owned by the user) and nothing else. The one
+# exception is the off-by-default `unsupported.settings` option.
 flake: {
   config,
   lib,
@@ -186,6 +187,44 @@ flake: {
     };
   };
 
+  # Unsupported: appends SettingSet lines to the hub's event log before each
+  # start (the hub is not running then). Only used when
+  # `unsupported.settings` is not empty. It never fails the start: a key
+  # whose last entry cannot be read is skipped with a warning.
+  settingsFile = pkgs.writeText "backplane-settings.json" (builtins.toJSON cfg.unsupported.settings);
+  applySettings = pkgs.writeShellScript "backplane-apply-settings" ''
+    export PATH=${lib.makeBinPath [pkgs.coreutils pkgs.gnugrep pkgs.jq]}
+    log=${lib.escapeShellArg cfg.dataDir}/events.jsonl
+    warn() { echo "backplane: unsupported.settings: $*" >&2; }
+    jq -r 'keys[]' ${settingsFile} | while IFS= read -r key; do
+      value=$(jq -r --arg k "$key" '.[$k]' ${settingsFile})
+      keyjson=$(jq -nc --arg k "$key" '$k')
+      last=
+      if [ -s "$log" ]; then
+        last=$(grep -F '"$":"SettingSet"' "$log" | grep -F "\"key\":$keyjson," | tail -n 1)
+      fi
+      if [ -n "$last" ]; then
+        current=$(printf '%s\n' "$last" | jq -er 'select(.["$"] == "SettingSet" and .key == $k) | .value | strings' --arg k "$key")
+        if [ $? -ne 0 ]; then
+          warn "cannot read the last entry for \"$key\"; skipped"
+          continue
+        fi
+        [ "$current" = "$value" ] && continue
+      fi
+      line=$(jq -nc --arg k "$key" --arg v "$value" --arg at "$(date +%s)" \
+        '{"$": "SettingSet", key: $k, value: $v, at: ($at | tonumber)}') || {
+        warn "cannot build the entry for \"$key\"; skipped"
+        continue
+      }
+      # Start on a new line if the file does not end with one.
+      if [ -s "$log" ] && [ -n "$(tail -c 1 "$log")" ]; then
+        printf '\n' >> "$log" || { warn "cannot write $log; skipped"; continue; }
+      fi
+      printf '%s\n' "$line" >> "$log" || warn "cannot write $log; \"$key\" skipped"
+    done
+    exit 0
+  '';
+
   tailscaleFlag = {
     off = "--no-tailscale";
     tailnet = "--tailscale";
@@ -220,8 +259,9 @@ in {
         defaultText = lib.literalExpression ''"''${config.users.users.''${user}.home}/.backplane/hub"'';
         description = ''
           Backplane's data folder (`--home`). The module creates it empty
-          (mode 0700, owned by the user) and never writes inside it. Event
-          log, settings and pairing token are managed by Backplane.
+          (mode 0700, owned by the user) and never writes inside it, unless
+          `unsupported.settings` is set. Event log, settings and pairing
+          token are managed by Backplane.
         '';
       };
 
@@ -268,6 +308,27 @@ in {
           `EnvironmentFile`, for example API keys of agent tools. It is a
           runtime path: it is never copied into the Nix store, and paths
           below /nix/store are refused.
+        '';
+      };
+
+      unsupported.settings = mkOption {
+        type = types.attrsOf types.str;
+        default = {};
+        example = {"restart.continue" = "off";};
+        description = ''
+          **Unsupported.** Settings applied before each hub start by
+          appending `SettingSet` lines to `<dataDir>/events.jsonl`. This
+          writes Backplane's internal event log, which is not a documented
+          interface. It was observed to work with Backplane 0.15.0 (the hub
+          replays `SettingSet` lines from `events.jsonl` at start). It may
+          break or corrupt state on other versions. Prefer changing settings
+          in Backplane's Settings.
+
+          For each key, a line is appended only if the last `SettingSet`
+          for it is missing or has another value. Existing lines are never
+          changed. A key whose last entry cannot be read is skipped with a
+          warning in the journal; the hub start never fails because of this
+          option. With the default `{}` nothing is written.
         '';
       };
     }
@@ -336,7 +397,9 @@ in {
             Group = cfg.group;
             # Create the data folder (and missing parents) as the user, then
             # leave it alone. `install -d` changes nothing inside it.
-            ExecStartPre = "${pkgs.coreutils}/bin/install -d -m 0700 ${lib.escapeShellArg cfg.dataDir}";
+            ExecStartPre =
+              ["${pkgs.coreutils}/bin/install -d -m 0700 ${lib.escapeShellArg cfg.dataDir}"]
+              ++ lib.optional (cfg.unsupported.settings != {}) "-${applySettings}";
             ExecStart = lib.escapeShellArgs [
               "${pkg}/bin/backplane-hub"
               "--home"
