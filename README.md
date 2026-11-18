@@ -6,8 +6,9 @@ connect to it.
 
 > **Status: first working version.** It packages Backplane **0.15.0**
 > only. The headless hub runs as a systemd service and is covered by a VM
-> test. The desktop window is packaged and loads (all libraries resolve),
-> but it has not been run on a real display yet.
+> test. The desktop window has run on a NixOS 26.05 workstation (GNOME on
+> Wayland, NVIDIA, GPU rendering) and paired with a remote hub over
+> Tailscale. aarch64-linux evaluates but has not been built or run.
 
 ## Outputs
 
