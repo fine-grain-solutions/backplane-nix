@@ -86,7 +86,8 @@ flake: {
   mkRuntime = c: {
     path =
       lib.optional (c.kicad.enable && c.kicad.fork.enable) "${forkRoot c.kicad.fork.package}"
-      ++ lib.optionals c.kicad.enable [pkgs.kicad pkgs.freecad]
+      ++ lib.optional c.kicad.enable c.kicad.package
+      ++ lib.optional c.freecad.enable c.freecad.package
       ++ c.extraPackages
       ++ hubTools;
     env =
@@ -95,14 +96,14 @@ flake: {
         # docs/deploy.md ("Who updates itself")
         BACKPLANE_NO_UPDATE = "1";
       }
-      // lib.optionalAttrs c.kicad.enable {
+      // lib.optionalAttrs c.freecad.enable {
         # Console executable of FreeCAD. docs/mechanical.md
-        BACKPLANE_FREECAD = "${pkgs.freecad}/bin/freecadcmd";
+        BACKPLANE_FREECAD = "${c.freecad.package}/bin/freecadcmd";
       };
   };
 
   # Options that the service and the program have in common.
-  commonOptions = what: {
+  commonOptions = what: c: {
     package = mkOption {
       type = types.package;
       default = flake.packages.${system}.backplane;
@@ -122,7 +123,19 @@ flake: {
     };
 
     kicad = {
-      enable = mkEnableOption "KiCad and FreeCAD for Backplane (nixpkgs packages on PATH, BACKPLANE_FREECAD set)";
+      enable = mkEnableOption "KiCad for Backplane (`kicad.package` on PATH)";
+
+      package = mkOption {
+        type = types.package;
+        default = pkgs.kicad;
+        defaultText = lib.literalExpression "pkgs.kicad";
+        example = lib.literalExpression "pkgs-unstable.kicad";
+        description = ''
+          The KiCad put on PATH. Choose the same KiCad you use yourself, so
+          that Backplane and you run one version and only one copy is
+          installed.
+        '';
+      };
 
       fork = {
         enable = mkEnableOption ''
@@ -137,6 +150,22 @@ flake: {
           defaultText = lib.literalExpression "backplane-nix.packages.x86_64-linux.backplane-kicad";
           description = "The KiCad fork. Its root needs bin/kicad-cli and manifest.json.";
         };
+      };
+    };
+
+    freecad = {
+      enable =
+        mkEnableOption "FreeCAD for Backplane (`freecad.package` on PATH, BACKPLANE_FREECAD set)"
+        // {
+          default = c.kicad.enable;
+          defaultText = lib.literalExpression "kicad.enable";
+        };
+
+      package = mkOption {
+        type = types.package;
+        default = pkgs.freecad;
+        defaultText = lib.literalExpression "pkgs.freecad";
+        description = "The FreeCAD whose `freecadcmd` Backplane uses.";
       };
     };
 
@@ -242,13 +271,13 @@ in {
         '';
       };
     }
-    // commonOptions "Used for the hub.";
+    // commonOptions "Used for the hub." cfg;
 
   options.programs.backplane =
     {
       enable = mkEnableOption "the Backplane desktop window (`backplane` launcher)";
     }
-    // commonOptions "Used for the desktop window.";
+    // commonOptions "Used for the desktop window." pcfg;
 
   config = mkMerge [
     (mkIf cfg.enable (let

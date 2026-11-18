@@ -82,7 +82,10 @@ plus one Tailscale flag, with `BACKPLANE_NO_UPDATE=1`.
 | `openFirewall` | `false` | Open `port` on the Tailscale interface only. |
 | `environmentFile` | `null` | Runtime file for systemd `EnvironmentFile=`. Absolute path, not under `/nix/store`. |
 | `extraPackages` | `[]` | Packages on the hub's `PATH` (for example agent CLIs). |
-| `kicad.enable` | `false` | nixpkgs KiCad and FreeCAD on `PATH`; sets `BACKPLANE_FREECAD`. |
+| `kicad.enable` | `false` | Put `kicad.package` on `PATH`. |
+| `kicad.package` | `pkgs.kicad` | The KiCad on `PATH`, for example `pkgs-unstable.kicad`. |
+| `freecad.enable` | follows `kicad.enable` | Put `freecad.package` on `PATH` and set `BACKPLANE_FREECAD`. |
+| `freecad.package` | `pkgs.freecad` | The FreeCAD (its `freecadcmd` is used). |
 | `kicad.fork.enable` | `false` | Use Backplane's KiCad fork for `kicad-cli`. Needs `kicad.enable`. |
 | `kicad.fork.package` | this flake's `backplane-kicad` | The fork. |
 | `kistack.enable` | `true` | Put the KiStack skills next to the hub. |
@@ -91,12 +94,24 @@ plus one Tailscale flag, with `BACKPLANE_NO_UPDATE=1`.
 ### `programs.backplane`
 
 Options: `enable`, `package`, `extraPackages`, `kicad.enable`,
-`kicad.fork.enable`, `kicad.fork.package`, `kistack.enable`,
+`kicad.package`, `kicad.fork.enable`, `kicad.fork.package`,
+`freecad.enable`, `freecad.package`, `kistack.enable`,
 `kistack.package`, with the same meaning as above. It installs a
 `backplane` launcher (and a desktop entry) that starts `backplane-gpui`
 with `BACKPLANE_NO_UPDATE=1`. If it is enabled together with
 `services.backplane` on port 3787, the module warns, because the window's
 own hub uses that port by default.
+
+### KiCad, FreeCAD and the GPU
+
+`kicad.package` defaults to `pkgs.kicad` of the system's nixpkgs. Set it to
+the KiCad you already use (for example `pkgs-unstable.kicad`), so that
+Backplane and you run the same version and only one KiCad is installed.
+FreeCAD is large (about 7 GiB with its closure); set
+`freecad.enable = false` if you don't need it.
+
+The desktop window uses the GPU through the normal NixOS driver path
+(`hardware.graphics`). It was tested on NVIDIA under GNOME Wayland.
 
 ### How KiCad and KiStack are found
 
