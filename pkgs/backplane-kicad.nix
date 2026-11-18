@@ -11,18 +11,37 @@
 # reason it is not patched, stripped or shebang-patched as a whole; only the
 # launcher scripts are adjusted.
 #
-# The stock symbol, footprint and 3D-model libraries are left out of the
-# unpack (several GB). The launchers use nixpkgs' KiCad library packages
-# instead. A caller's KICAD10_*_DIR still wins, as in the upstream launcher.
+# By default the bundle is kept as upstream ships it, including its own
+# symbol, footprint and 3D-model libraries (share/kicad/{symbols,footprints,
+# 3dmodels}; KICAD_LIBRARY_SOURCES.txt names them as the 10.0.6 library tags).
+# The launcher's library lines stay as upstream wrote them (`$root/share/...`);
+# only `root` is set to the store path. This makes the closure several GB
+# bigger.
+#
+# With `withLibraries = false` those three folders are left out of the unpack
+# and the launchers use nixpkgs' KiCad library packages instead. In both
+# cases a caller's KICAD10_*_DIR still wins, as in the upstream launcher.
+# `demos` is always left out.
 {
   lib,
   stdenvNoCC,
   fetchurl,
   kicad,
   runtimeShell,
+  withLibraries ? true,
 }: let
   release = "backplane-kicad-v10.99.0-bp.4";
   libs = kicad.libraries;
+  excludeArgs = lib.optionals (!withLibraries) [
+    "--exclude='*/share/kicad/3dmodels'"
+    "--exclude='*/share/kicad/symbols'"
+    "--exclude='*/share/kicad/footprints'"
+  ];
+  libraryArgs = lib.optionals (!withLibraries) [
+    "--replace-fail '$root/share/kicad/symbols' '${libs.symbols}/share/kicad/symbols'"
+    "--replace-fail '$root/share/kicad/footprints' '${libs.footprints}/share/kicad/footprints'"
+    "--replace-fail '$root/share/kicad/3dmodels' '${libs.packages3d}/share/kicad/3dmodels'"
+  ];
 in
   stdenvNoCC.mkDerivation (finalAttrs: {
     pname = "backplane-kicad";
@@ -47,10 +66,7 @@ in
       runHook preInstall
       mkdir -p $out
       tar -xzf $src -C $out --strip-components=1 \
-        --exclude='*/share/kicad/3dmodels' \
-        --exclude='*/share/kicad/symbols' \
-        --exclude='*/share/kicad/footprints' \
-        --exclude='*/share/kicad/demos'
+        ${lib.concatMapStrings (a: a + " \\\n        ") excludeArgs}--exclude='*/share/kicad/demos'
 
       grep -q '"apiVersion"' $out/manifest.json
 
@@ -60,10 +76,7 @@ in
         grep -q 'ld-linux-x86-64.so.2' "$f" || { echo "unexpected launcher $f"; exit 1; }
         substituteInPlace "$f" \
           --replace-fail '#!/usr/bin/env sh' '#!${runtimeShell}' \
-          --replace-fail 'root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)' "root=$out" \
-          --replace-fail '$root/share/kicad/symbols' '${libs.symbols}/share/kicad/symbols' \
-          --replace-fail '$root/share/kicad/footprints' '${libs.footprints}/share/kicad/footprints' \
-          --replace-fail '$root/share/kicad/3dmodels' '${libs.packages3d}/share/kicad/3dmodels'
+          --replace-fail 'root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)' "root=$out" ${lib.concatStringsSep " " libraryArgs}
       done
       test -x $out/bin/kicad-cli.real
       runHook postInstall

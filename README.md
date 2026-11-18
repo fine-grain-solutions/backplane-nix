@@ -14,7 +14,7 @@ connect to it.
 | Output | What it is |
 | --- | --- |
 | `packages.<system>.backplane` | The upstream native release (hub, desktop window, guard), patched to run on NixOS, with the KiStack skills next to the hub. `x86_64-linux` and `aarch64-linux`. |
-| `packages.<system>.backplane-kicad` | Backplane's KiCad fork (release `10.99.0-bp.4`, the one Backplane 0.15.0 installs) with the headless IPC server (`kicad-cli api-server`), wrapped as released. `x86_64-linux` only. |
+| `packages.<system>.backplane-kicad` | Backplane's KiCad fork (release `10.99.0-bp.4`, the one Backplane 0.15.0 installs) with the headless IPC server (`kicad-cli api-server`), wrapped as released, **including its own symbol, footprint and 3D-model libraries** (the 10.0.6 library tags; the package closure is then about 4.4 GB, against about 1.5 GB with `withLibraries = false`). `.override { withLibraries = false; }` drops them and points the launchers at nixpkgs' KiCad libraries instead. `demos` are always left out. `x86_64-linux` only. |
 | `packages.<system>.kistack` | The KiStack KiCad skills, pinned, in the layout Backplane expects. |
 | `nixosModules.default` (alias `nixosModules.backplane`) | `services.backplane`: the hub as a systemd service for one user. `programs.backplane`: the desktop window, installed system-wide. |
 | `overlays.default` | Adds `backplane`, `backplane-kicad` and `backplane-kistack` to `pkgs`. |
@@ -87,7 +87,7 @@ plus one Tailscale flag, with `BACKPLANE_NO_UPDATE=1`.
 | `freecad.enable` | follows `kicad.enable` | Put `freecad.package` on `PATH` and set `BACKPLANE_FREECAD`. |
 | `freecad.package` | `pkgs.freecad` | The FreeCAD (its `freecadcmd` is used). |
 | `kicad.fork.enable` | `false` | Use Backplane's KiCad fork for `kicad-cli`. Needs `kicad.enable`. |
-| `kicad.fork.package` | this flake's `backplane-kicad` | The fork. |
+| `kicad.fork.package` | this flake's `backplane-kicad` | The fork, with its own libraries (large; use `backplane-kicad.override { withLibraries = false; }` for nixpkgs' libraries). |
 | `kistack.enable` | `true` | Put the KiStack skills next to the hub. |
 | `kistack.package` | this flake's `kistack` | The skills. |
 
