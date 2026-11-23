@@ -4,7 +4,7 @@ A Nix flake that sets up [Backplane](https://github.com/BackplaneWorks/Backplane
 as a user application, or as a headless hub service with clients that
 connect to it.
 
-> **Status: first working version.** It packages Backplane **0.15.0**
+> **Status: first working version.** It packages Backplane **0.16.4**
 > only. The headless hub runs as a systemd service and is covered by a VM
 > test. The desktop window has run on a NixOS 26.05 workstation (GNOME on
 > Wayland, NVIDIA, GPU rendering) and paired with a remote hub over
@@ -15,7 +15,7 @@ connect to it.
 | Output | What it is |
 | --- | --- |
 | `packages.<system>.backplane` | The upstream native release (hub, desktop window, guard), patched to run on NixOS, with the KiStack skills next to the hub. `x86_64-linux` and `aarch64-linux`. |
-| `packages.<system>.backplane-kicad` | Backplane's KiCad fork (release `10.99.0-bp.4`, the one Backplane 0.15.0 installs) with the headless IPC server (`kicad-cli api-server`), wrapped as released, **including its own symbol, footprint and 3D-model libraries** (the 10.0.6 library tags; the package closure is then about 4.4 GB, against about 1.5 GB with `withLibraries = false`). `.override { withLibraries = false; }` drops them and points the launchers at nixpkgs' KiCad libraries instead. `demos` are always left out. `x86_64-linux` only. |
+| `packages.<system>.backplane-kicad` | Backplane's KiCad fork (release `10.99.0-bp.13.1`, the one Backplane 0.16.4 installs) with the headless IPC server (`kicad-cli api-server`), wrapped as released, **including its own symbol, footprint and 3D-model libraries** (the 10.0.6 library tags; the package closure is then about 4.4 GB, against about 1.5 GB with `withLibraries = false`). `.override { withLibraries = false; }` drops them and points the launchers at nixpkgs' KiCad libraries instead. `demos` are always left out. `x86_64-linux` only. |
 | `packages.<system>.kistack` | The KiStack KiCad skills, pinned, in the layout Backplane expects. |
 | `nixosModules.default` (alias `nixosModules.backplane`) | `services.backplane`: the hub as a systemd service for one user. `programs.backplane`: the desktop window, installed system-wide. |
 | `overlays.default` | Adds `backplane`, `backplane-kicad` and `backplane-kistack` to `pkgs`. |
@@ -101,7 +101,7 @@ With a non-empty set, before each hub start the module appends a
 `SettingSet` line to `<dataDir>/events.jsonl` for every key whose last
 `SettingSet` is missing or has another value. Existing lines are never
 changed. This writes Backplane's internal event log, which is not a
-documented interface. It was observed to work with Backplane 0.15.0 (the
+documented interface. It was observed to work with Backplane 0.15.0 and 0.16.4 (the
 hub replays `SettingSet` lines from `events.jsonl` at start). It may break
 or corrupt state on other versions. Prefer changing settings in
 Backplane's Settings. If a key's last entry cannot be read, it is skipped
@@ -132,7 +132,7 @@ The desktop window uses the GPU through the normal NixOS driver path
 ### How KiCad and KiStack are found
 
 Only documented environment variables are set (`BACKPLANE_NO_UPDATE`,
-`BACKPLANE_FREECAD`). Backplane 0.15.0 finds `kicad-cli` on `PATH`, so the
+`BACKPLANE_FREECAD`). Backplane 0.16.4 finds `kicad-cli` on `PATH`, so the
 module puts KiCad (and, with `kicad.fork.enable`, the fork first) there
 instead of setting `BACKPLANE_KICAD_CLI`. It looks for the KiStack skills
 in a `kistack` folder next to its binaries, so the package links them

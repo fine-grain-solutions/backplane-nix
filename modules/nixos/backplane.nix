@@ -319,7 +319,7 @@ in {
           **Unsupported.** Settings applied before each hub start by
           appending `SettingSet` lines to `<dataDir>/events.jsonl`. This
           writes Backplane's internal event log, which is not a documented
-          interface. It was observed to work with Backplane 0.15.0 (the hub
+          interface. It was observed to work with Backplane 0.15.0 and 0.16.4 (the hub
           replays `SettingSet` lines from `events.jsonl` at start). It may
           break or corrupt state on other versions. Prefer changing settings
           in Backplane's Settings.

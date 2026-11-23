@@ -8,12 +8,12 @@
   runCommand,
   fetchFromGitHub,
 }: let
-  rev = "641ade9041bb0844c4530dfff11010eef30919af";
+  rev = "2c6b542d7a45b5993895764754573d1b8695953f";
   src = fetchFromGitHub {
     owner = "BackplaneWorks";
     repo = "kistack";
     inherit rev;
-    hash = "sha256-zIVAUB0GLTNaipt8SLgFhFC5oWGQ/1yFEwprDWDUw1g=";
+    hash = "sha256-AHJOmDXgaYioAoIPQ+BK8YTWkL+rB/f/dv7Vn+6dQ8k=";
   };
 in
   runCommand "kistack-${builtins.substring 0 7 rev}" {

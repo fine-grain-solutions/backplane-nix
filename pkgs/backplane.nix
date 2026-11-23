@@ -48,16 +48,16 @@
   # KiStack skills linked next to the hub (null: none)
   kistack ? null,
 }: let
-  version = "0.15.0";
+  version = "0.16.4";
   tag = "v${version}";
   sources = {
     x86_64-linux = {
       asset = "linux-x64-native";
-      hash = "sha256-McGIWYvKqnmwDdGy7gvYAAFNR4GLWPsGbcHr+VrNvOM=";
+      hash = "sha256-06AOO9uKLtgdlQGnLVl5sUeIneZOVRau959nxO3hL18=";
     };
     aarch64-linux = {
       asset = "linux-arm64-native";
-      hash = "sha256-HVHm6gocZebD6F3FiZOeycLa/FvOlX+qcFmTMEaUwmQ=";
+      hash = "sha256-abr2QETOZD00inIFcZ/UmJexWGdRcsSNgrHJOTxRWg0=";
     };
   };
   source = sources.${stdenv.hostPlatform.system} or (throw "backplane: unsupported system ${stdenv.hostPlatform.system}");

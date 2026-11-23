@@ -1,8 +1,8 @@
 # Backplane's KiCad fork (https://github.com/BackplaneWorks/Backplane_KiCad):
 # KiCad 10.99 plus the headless IPC server (`kicad-cli api-server`).
 #
-# The pinned release is the one Backplane 0.15.0 itself installs on Linux
-# (10.99.0-bp.4). Backplane treats a `kicad-cli` as the fork when
+# The pinned release is the one Backplane 0.16.4 itself installs on Linux
+# (10.99.0-bp.13.1). Backplane treats a `kicad-cli` as the fork when
 # <root>/manifest.json is next to <root>/bin, so the layout of the release
 # is kept.
 #
@@ -40,7 +40,7 @@
     export XDG_DATA_DIRS="${glycin-loaders}/share''${XDG_DATA_DIRS:+:$XDG_DATA_DIRS}"
     export PATH="${bubblewrap}/bin''${PATH:+:$PATH}"
   '';
-  release = "backplane-kicad-v10.99.0-bp.4";
+  release = "backplane-kicad-v10.99.0-bp.13.1";
   libs = kicad.libraries;
   excludeArgs = lib.optionals (!withLibraries) [
     "--exclude='*/share/kicad/3dmodels'"
@@ -55,13 +55,13 @@
 in
   stdenvNoCC.mkDerivation (finalAttrs: {
     pname = "backplane-kicad";
-    version = "10.99.0-bp.4";
+    version = "10.99.0-bp.13.1";
 
     src = fetchurl {
       url = "https://github.com/BackplaneWorks/Backplane_KiCad/releases/download/${release}/backplane-kicad-linux-x86_64-${finalAttrs.version}.tar.gz";
-      # sha256 f60a71817d057f9dcf3faef632b2f85d06a613108dee23807c9de81aae97e0b4
-      # is the value Backplane 0.15.0 checks for this release.
-      hash = "sha256-9gpxgX0Ff53PP672MrL4XQamExCN7iOAfJ3oGq6X4LQ=";
+      # sha256 c51386b0c2ec7f1abb02b1b324f03d0cfeee12cc43706c4681dad8394303e0f6
+      # is the value Backplane 0.16.4 checks for this release.
+      hash = "sha256-xROGsMLsfxq7ArGzJPA9DP7uEsxDcGxGgdrYOUMD4PY=";
     };
 
     dontUnpack = true;
